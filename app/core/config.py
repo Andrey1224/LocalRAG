@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import List, Optional
 
 import yaml
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -37,6 +38,11 @@ class Settings(BaseSettings):
     postgres_user: str = Field(default="localrag", env="POSTGRES_USER")
     postgres_password: str = Field(default="localrag_password", env="POSTGRES_PASSWORD")
     
+    # Redis
+    redis_host: str = Field(default="localhost", env="REDIS_HOST")
+    redis_port: int = Field(default=6379, env="REDIS_PORT")
+    redis_db: int = Field(default=0, env="REDIS_DB")
+    
     # Vector Database
     qdrant_host: str = Field(default="localhost", env="QDRANT_HOST")
     qdrant_port: int = Field(default=6333, env="QDRANT_PORT")
@@ -49,6 +55,8 @@ class Settings(BaseSettings):
     
     # LLM Configuration
     llm_model: str = Field(default="llama3.1:8b", env="LLM_MODEL")
+    ollama_host: str = Field(default="localhost", env="OLLAMA_HOST")
+    ollama_port: int = Field(default=11434, env="OLLAMA_PORT")
     ollama_base_url: str = Field(default="http://localhost:11434", env="OLLAMA_BASE_URL")
     reranker_model: str = Field(default="BAAI/bge-reranker-v2-m3", env="RERANKER_MODEL")
     embedding_model: str = Field(default="BAAI/bge-small-en-v1.5", env="EMBEDDING_MODEL")
@@ -58,6 +66,11 @@ class Settings(BaseSettings):
     context_window: int = Field(default=2500, env="CONTEXT_WINDOW")
     chunk_size: int = Field(default=1000, env="CHUNK_SIZE")
     chunk_overlap: int = Field(default=100, env="CHUNK_OVERLAP")
+    
+    # File Processing
+    max_file_size_mb: int = Field(default=50, env="MAX_FILE_SIZE_MB")
+    max_chunk_size_tokens: int = Field(default=1000, env="MAX_CHUNK_SIZE_TOKENS")
+    chunk_overlap_tokens: int = Field(default=100, env="CHUNK_OVERLAP_TOKENS")
     
     # Logging
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
@@ -90,9 +103,11 @@ class Settings(BaseSettings):
         """Get Elasticsearch URL."""
         return f"http://{self.elasticsearch_host}:{self.elasticsearch_port}"
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "allow"
+    }
 
 
 class AppConfig:
