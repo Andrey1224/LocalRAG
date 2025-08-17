@@ -1,0 +1,89 @@
+[tool.poetry]
+name = "localrag"
+version = "0.1.0"
+description = "LLM-платформа с RAG и обратной связью для работы с внутренними документами"
+authors = ["LocalRAG Team"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+python-multipart = "^0.0.6"
+httpx = "^0.25.2"
+
+# Document processing
+pypdf2 = "^3.0.1"
+python-docx = "^1.1.0"
+beautifulsoup4 = "^4.12.2"
+langdetect = "^1.0.9"
+tiktoken = "^0.5.2"
+
+# RAG and ML
+sentence-transformers = "^2.2.2"
+qdrant-client = "^1.7.0"
+elasticsearch = "^8.11.0"
+torch = "^2.1.0"
+transformers = "^4.36.0"
+FlagEmbedding = "^1.2.5"
+
+# Database and storage
+psycopg2-binary = "^2.9.9"
+sqlalchemy = "^2.0.23"
+alembic = "^1.13.0"
+
+# Monitoring and logging
+structlog = "^23.2.0"
+
+# Evaluation
+ragas = "^0.1.0"
+datasets = "^2.15.0"
+
+# UI
+streamlit = "^1.28.0"
+plotly = "^5.17.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+pytest-asyncio = "^0.21.1"
+pytest-cov = "^4.1.0"
+black = "^23.11.0"
+ruff = "^0.1.6"
+mypy = "^1.7.1"
+pre-commit = "^3.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "--cov=app --cov-report=term-missing"

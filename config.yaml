@@ -1,0 +1,118 @@
+# LocalRAG Configuration
+
+models:
+  llm:
+    name: "llama3.1:8b"
+    temperature: 0.1
+    max_tokens: 400
+    top_p: 0.9
+    
+  embedding:
+    name: "BAAI/bge-small-en-v1.5"
+    batch_size: 32
+    max_length: 512
+    
+  reranker:
+    name: "BAAI/bge-reranker-v2-m3"
+    batch_size: 16
+    max_length: 512
+    top_k: 5
+
+chunking:
+  chunk_size: 1000
+  overlap: 100
+  min_chunk_size: 50
+  separators: ["\n\n", "\n", ". ", "? ", "! ", " "]
+
+search:
+  bm25:
+    top_k: 20
+    min_score: 0.1
+    
+  dense:
+    top_k: 20
+    score_threshold: 0.3
+    
+  hybrid:
+    weights:
+      bm25: 0.3
+      dense: 0.7
+    final_top_k: 10
+
+generation:
+  max_context_length: 2500
+  citation_format: "[source: {source}, page {page}]"
+  system_prompt: |
+    Ты ассистент, отвечающий на вопросы пользователя по внутренней документации. 
+    Ты всегда используешь только предоставленные фрагменты, не придумываешь ничего сам. 
+    В каждом ответе ты ОБЯЗАТЕЛЬНО вставляешь цитаты, указывая источник (source), 
+    название документа (doc_title), секцию или страницу (section/page).
+    
+    Если информации недостаточно, ты честно отвечаешь: "Недостаточно данных для точного ответа."
+    
+    Формат цитат: [source: doc1, page 4]
+    
+    Говори кратко, ясно и точно.
+
+evaluation:
+  ragas:
+    metrics: ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]
+    batch_size: 16
+    
+  custom:
+    bleu: true
+    rouge: true
+    bertscore: false
+
+feedback:
+  reasons:
+    - "галлюцинация"
+    - "не по теме" 
+    - "неполный ответ"
+    - "устаревшая информация"
+    - "опасный/вредный контент"
+    
+  rate_limit:
+    max_requests: 5
+    window_minutes: 1
+
+ingest:
+  supported_formats: [".pdf", ".md", ".html", ".txt", ".docx"]
+  max_file_size_mb: 50
+  max_chunks_per_document: 2000
+  
+  parsers:
+    pdf:
+      extract_images: false
+      extract_tables: true
+      
+    html:
+      remove_scripts: true
+      remove_styles: true
+      
+    markdown:
+      preserve_code_blocks: true
+
+logging:
+  level: "INFO"
+  format: "json"
+  fields:
+    - "timestamp"
+    - "trace_id"
+    - "session_id"
+    - "user_id"
+    - "endpoint"
+    - "method"
+    - "status_code"
+    - "latency_ms"
+    - "error"
+
+security:
+  cors:
+    allow_origins: ["http://localhost:3000", "http://localhost:8501"]
+    allow_methods: ["GET", "POST", "PUT", "DELETE"]
+    allow_headers: ["*"]
+    
+  rate_limiting:
+    requests_per_minute: 60
+    burst_size: 10
