@@ -15,6 +15,7 @@ from app.models.base import IngestRequest, IngestResponse, ErrorResponse
 from app.services.document_parser import UniversalDocumentParser
 from app.services.chunking import TextChunker
 from app.services.embeddings import QdrantService
+from app.services.search import ElasticsearchService
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -40,6 +41,7 @@ class IngestService:
         self.parser = UniversalDocumentParser()
         self.chunker = TextChunker()
         self.vector_service = QdrantService()
+        self.search_service = ElasticsearchService()
         self.logger = get_logger("ingest_service")
     
     async def check_document_exists(self, content_hash: str, db) -> Dict[str, Any]:
@@ -141,8 +143,9 @@ class IngestService:
                     "error": f"Document produced {len(chunks)} chunks, max allowed is {max_chunks}"
                 }
             
-            # Index chunks in Qdrant
-            chunk_ids = await self.vector_service.index_chunks(chunks)
+            # Index chunks in both Qdrant and Elasticsearch
+            vector_chunk_ids = await self.vector_service.index_chunks(chunks)
+            search_chunk_ids = await self.search_service.index_chunks(chunks)
             
             # Save document metadata
             doc_id = await self.save_document_metadata(doc_data, len(chunks), db)
@@ -160,7 +163,7 @@ class IngestService:
                 "status": "indexed",
                 "doc_id": doc_id,
                 "chunks": len(chunks),
-                "chunk_ids": chunk_ids
+                "chunk_ids": vector_chunk_ids
             }
             
         except Exception as e:
@@ -217,8 +220,9 @@ class IngestService:
             deleted_count = 0
             for doc_id, path in docs_to_delete:
                 try:
-                    # Delete from Qdrant
+                    # Delete from both Qdrant and Elasticsearch
                     await self.vector_service.delete_document_chunks(doc_id)
+                    await self.search_service.delete_document_chunks(doc_id)
                     
                     # Delete from database
                     db.execute(

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, ingest
+from app.api import health, ingest, ask
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.middleware import (
@@ -66,6 +66,7 @@ if settings.env == "prod":
 # Include routers
 app.include_router(health.router, tags=["Health"])
 app.include_router(ingest.router, prefix="/api", tags=["Ingest"])
+app.include_router(ask.router, prefix="/api", tags=["Ask"])
 
 # Root endpoint
 @app.get("/")
