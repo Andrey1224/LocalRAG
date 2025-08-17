@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, ingest, ask
+from app.api import health, ingest, ask, feedback, evaluation
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.middleware import (
@@ -67,6 +67,8 @@ if settings.env == "prod":
 app.include_router(health.router, tags=["Health"])
 app.include_router(ingest.router, prefix="/api", tags=["Ingest"])
 app.include_router(ask.router, prefix="/api", tags=["Ask"])
+app.include_router(feedback.router, prefix="/api", tags=["Feedback"])
+app.include_router(evaluation.router, prefix="/api", tags=["Evaluation"])
 
 # Root endpoint
 @app.get("/")
