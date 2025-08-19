@@ -436,62 +436,128 @@ def semantic_reranker_with_rules(
 
 
 def detect_existing_feature(text: str, question: str) -> bool:
-    """Определяет упоминание существующих функций"""
+    """
+    Улучшенное определение упоминания существующих функций.
+    Исправляет false positive roadmap активации для существующих функций.
+    """
+    # Специфические существующие функции HelpZen
+    specific_features = {
+        "slack": ["slack", "интеграции", "поддерживаются:", "zendesk", "salesforce"],
+        "live chat": ["live chat", "виджет", "чат", "реальном времени"],
+        "2fa": ["двухфакторная", "2fa", "sms", "authy", "google authenticator"],
+        "пробный период": ["пробный период", "14 дней", "тестовый", "trial"],
+        "ticketing": ["ticketing system", "тикет", "обращени", "управление"],
+        "аналитика": ["аналитика", "отчёты", "sla"],
+        "поддержка": ["support@", "email:", "telegram", "live chat", "часы работы"],
+    }
+    
+    # Проверяем, есть ли в вопросе и тексте упоминания конкретных функций
+    question_lower = question.lower()
+    text_lower = text.lower()
+    
+    for feature, keywords in specific_features.items():
+        # Если вопрос о конкретной функции
+        if any(keyword in question_lower for keyword in keywords):
+            # И текст содержит описание этой функции (но НЕ roadmap)
+            if any(keyword in text_lower for keyword in keywords):
+                # Проверяем, что это НЕ roadmap секция
+                roadmap_markers = ["q1", "q2", "q3", "q4", "планируется", "будущем", "roadmap"]
+                is_roadmap = any(marker in text_lower for marker in roadmap_markers)
+                if not is_roadmap:
+                    return True
+    
+    # Общие маркеры существующих функций
     existing_markers = [
         "поддерживается",
-        "доступно",
+        "доступно", 
         "включает",
-        "функции",
+        "функции helpzen",
+        "основные функции",
         "возможности",
-        "методы",
+        "методы входа",
         "можно",
         "умеет",
-        "поддержка",
+        "тарифы",
+        "стоимость",
         "есть",
         "имеется",
     ]
-    roadmap_markers = ["q1", "q2", "q3", "q4", "планируется", "будущем"]
+    roadmap_markers = ["q1", "q2", "q3", "q4", "планируется", "будущем", "roadmap", "дорожная карта"]
 
-    has_existing = any(marker in text for marker in existing_markers)
-    has_roadmap = any(marker in text for marker in roadmap_markers)
+    has_existing = any(marker in text_lower for marker in existing_markers)
+    has_roadmap = any(marker in text_lower for marker in roadmap_markers)
 
     # Если есть и то и то, приоритет existing (НЕ roadmap)
     return has_existing and not has_roadmap
 
 
 def get_category_boost(text: str, question: str, question_type: str) -> float:
-    """Возвращает boost для специфических категорий"""
+    """
+    Улучшенный boost для специфических категорий.
+    Исправляет проблемы поиска релевантности (20% тестов).
+    """
     boosts = {
-        "contact": 3.0,  # "как связаться", "поддержка"
-        "security": 2.5,  # "безопасность", "данные"
+        "contact": 3.5,  # Увеличен для лучшего поиска контактов
+        "security": 2.8,  # "безопасность", "данные"
         "pricing": 2.5,  # "тариф", "стоимость"
-        "feature_inquiry": 2.0,  # технические термины
-        "instruction": 1.8,  # "как", "где"
+        "feature_inquiry": 2.2,  # технические термины
+        "instruction": 2.0,  # "как", "где" - увеличен
+        "existence": 1.5,  # existence вопросы
     }
 
-    # Специальные case-ы
-    if question_type == "contact" and any(
-        marker in text for marker in ["support@", "email", "telegram", "live chat"]
-    ):
-        return boosts["contact"]
-    elif question_type == "security" and any(
-        marker in text for marker in ["aws", "шифрование", "soc 2", "данные"]
-    ):
-        return boosts["security"]
-    elif question_type == "pricing" and any(
-        marker in text for marker in ["$", "тариф", "бесплатн", "период"]
-    ):
-        return boosts["pricing"]
-    elif "2fa" in question and "двухфакторн" in text:
-        return 3.0  # специальный boost для 2FA
+    text_lower = text.lower()
+    question_lower = question.lower()
+
+    # Специальные high-priority case-ы
+    if question_type == "contact":
+        contact_markers = [
+            "support@", "email:", "telegram", "live chat", "часы работы",
+            "пн–пт", "sla:", "ответ в течение", "поддержка", "связаться"
+        ]
+        if any(marker in text_lower for marker in contact_markers):
+            return boosts["contact"]
+            
+    elif question_type == "security":
+        security_markers = [
+            "aws", "шифрование", "soc 2", "данные хранятся", "aes-", "tls",
+            "политики безопасности", "франкфурт", "бэкап"
+        ]
+        if any(marker in text_lower for marker in security_markers):
+            return boosts["security"]
+            
+    elif question_type == "pricing":
+        pricing_markers = [
+            "$", "тариф", "бесплатн", "период", "pro:", "business:", "free:",
+            "/мес", "агент", "интеграц", "пробный"
+        ]
+        if any(marker in text_lower for marker in pricing_markers):
+            return boosts["pricing"]
+            
+    # Специальные боosts для конкретных функций
+    if "2fa" in question_lower or "двухфакторн" in question_lower:
+        if "двухфакторна" in text_lower or "2fa" in text_lower or "authy" in text_lower:
+            return 3.5  # высокий boost для 2FA
+            
+    if "ai" in question_lower or "ассистент" in question_lower:
+        if "ai-ассистент" in text_lower or "q4" in text_lower:
+            return 3.0  # специальный boost для AI
+            
+    if "часы работы" in question_lower or "время работы" in question_lower:
+        if "пн–пт" in text_lower or "часы работы" in text_lower:
+            return 3.5  # максимальный boost для часов работы
 
     return boosts.get(question_type, 1.0)
 
 
 def has_contact_info(text: str) -> bool:
-    """Проверяет наличие контактной информации"""
-    contact_markers = ["support@", "email", "@", "телефон", "часы работы", "telegram", "live chat"]
-    return any(marker in text for marker in contact_markers)
+    """Улучшенная проверка наличия контактной информации"""
+    contact_markers = [
+        "support@", "email:", "@", "телефон", "часы работы", "telegram", "live chat",
+        "пн–пт", "sla:", "ответ в течение", "связаться", "обратиться", 
+        "поддержка", "техподдержка", "служба", "график работы", "время работы"
+    ]
+    text_lower = text.lower()
+    return any(marker in text_lower for marker in contact_markers)
 
 
 def has_security_info(text: str) -> bool:
@@ -571,7 +637,7 @@ def enhanced_question_classifier(question_lower: str) -> tuple:
     """
     import re
 
-    # Explicit existence patterns (более точные регексы)
+    # Explicit existence patterns (расширенные и более точные)
     existence_patterns = [
         r"есть\s+ли",
         r"поддерживает\s+ли",
@@ -581,9 +647,19 @@ def enhanced_question_classifier(question_lower: str) -> tuple:
         r"можно\s+ли",
         r"имеется\s+ли",
         r"появится\s+ли",
-        r"доступн",
+        r"доступн\w*\s*(ли)?",
         r"включает\s+ли",
         r"умеет\s+ли",
+        r"возможн\w*\s*(ли)?",
+        r"предусмотрен\w*\s*(ли)?",
+        r"реализован\w*\s*(ли)?",
+        r"работает\s+ли",
+        r"функционирует\s+ли",
+        r"поддержива\w+\s*(ли)?",
+        r"присутствует\s+ли",
+        r"^(есть|имеется|доступна?)\s+",
+        r"встроен\w*\s*(ли)?",
+        r"интегрирован\w*\s*(ли)?",
     ]
 
     # Instruction patterns (как, где, когда)
@@ -599,12 +675,19 @@ def enhanced_question_classifier(question_lower: str) -> tuple:
         r"где\s+\w+\s+\w+",
     ]
 
-    # Technical feature inquiry (короткие технические термины)
+    # Technical feature inquiry (расширенные паттерны)
     feature_patterns = [
         r"^(ai|ассистент|voip|2fa|двухфакторн)\s*$",
         r"^(ai[\-\s]*ассистент|искусственн\w*\s*интеллект)\s*$",
         r"^(whatsapp|telegram|slack)\s*(интеграция|api)?\s*$",
         r"интеграция\s+с\s+\w+",
+        r"^(live\s+chat|лайв\s+чат|чат)\s*$",
+        r"^(ticketing|тикетинг|система\s+тикетов)\s*$",
+        r"^(база\s+знаний|knowledge\s+base)\s*$",
+        r"^(аналитика|analytics|отчеты)\s*$",
+        r"поддержка\s+(whatsapp|telegram|slack|facebook)",
+        r"голосовая\s+поддержка",
+        r"api\s+интеграция",
         r"^(база\s+знаний|live\s+chat|ticketing)\s*$",
         r"^(голосов|звонк)\w*\s*(поддержка|канал)?\s*$",
     ]
@@ -618,13 +701,22 @@ def enhanced_question_classifier(question_lower: str) -> tuple:
         r"пробный\s+период",
     ]
 
-    # Contact patterns
+    # Contact patterns (расширенные для лучшей детекции)
     contact_patterns = [
         r"как\s+связаться",
+        r"как\s+обратиться",
         r"контакт\w*",
-        r"поддержка",
+        r"поддержк\w*\s*(связь|служба)?",
         r"email\s+поддержки",
         r"часы\s+работы",
+        r"время\s+работы",
+        r"график\s+работы",
+        r"связь\s+с\s+поддержкой",
+        r"служба\s+поддержки",
+        r"техподдержка",
+        r"телефон\s+поддержки",
+        r"написать\s+в\s+поддержку",
+        r"обращение\s+в\s+поддержку",
     ]
 
     # Security patterns
@@ -775,11 +867,14 @@ def generate_answer_with_ollama(question: str, context_chunks: list[dict]) -> st
 
         # Для existence вопросов всегда приоритизируем roadmap, если он найден
         if roadmap_sections:
+            # Применяем дедупликацию к roadmap секциям
+            unique_roadmap_sections = advanced_deduplication(roadmap_sections)
+            
             # Ищем наиболее релевантную roadmap секцию к вопросу
             best_roadmap = None
             best_score = 0
 
-            for section in roadmap_sections:
+            for section in unique_roadmap_sections:
                 section_lower = section.lower()
                 # Считаем релевантность roadmap секции к вопросу
                 matches = sum(1 for keyword in question_keywords if keyword in section_lower)
@@ -788,7 +883,7 @@ def generate_answer_with_ollama(question: str, context_chunks: list[dict]) -> st
                     best_roadmap = section
 
             # Если не нашли релевантную, берем первую
-            roadmap_info = best_roadmap if best_roadmap else roadmap_sections[0]
+            roadmap_info = best_roadmap if best_roadmap else unique_roadmap_sections[0]
 
             # Извлекаем квартал из roadmap
             quarter_match = re.search(r"q[1-4]", roadmap_info.lower())
@@ -816,8 +911,11 @@ def generate_answer_with_ollama(question: str, context_chunks: list[dict]) -> st
                 answer_parts.append(f"{section.strip()}")
 
         if answer_parts:
-            # Используем структурированное форматирование
-            answer = format_structured_answer(answer_parts, question_lower, sources)
+            # Простое структурированное форматирование
+            answer = "\n\n".join(answer_parts)
+            if sources:
+                source_list = ", ".join(sorted(sources))
+                answer += f"\n\n📚 **Источники:** {source_list}"
             return answer
 
 
