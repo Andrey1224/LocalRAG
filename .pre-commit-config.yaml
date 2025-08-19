@@ -1,0 +1,108 @@
+repos:
+  # Code formatting
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  # Linting and import sorting (replaces flake8 + isort)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests]
+        args: [--ignore-missing-imports]
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: ["-r", ".", "-f", "json", "-o", "bandit-report.json"]
+        exclude: ^tests/
+
+  # Dependency analysis (disabled for now - can be enabled when project is stable)
+  # - repo: https://github.com/fpgmaas/deptry
+  #   rev: "0.12.0"
+  #   hooks:
+  #     - id: deptry
+  #       args: [--config, pyproject.toml]
+
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: ["--unsafe"]
+      - id: check-toml
+      - id: check-json
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: detect-aws-credentials
+        args: ["--allow-missing-credentials"]
+      - id: detect-private-key
+
+  # Docker linting (disabled when Docker is not running)
+  # - repo: https://github.com/hadolint/hadolint
+  #   rev: v2.12.0
+  #   hooks:
+  #     - id: hadolint-docker
+  #       args: [--ignore, DL3008, --ignore, DL3009]
+
+  # Custom local hooks
+  - repo: local
+    hooks:
+      # Fast unit tests only (not integration tests)
+      - id: pytest-fast
+        name: pytest-fast
+        entry: python -m pytest
+        language: system
+        types: [python]
+        args: ["-x", "--tb=short", "-q", "tests/unit/", "--no-cov"]
+        pass_filenames: false
+
+      # Check for TODO/FIXME in committed code
+      - id: check-todos
+        name: Check for TODOs
+        entry: bash -c 'if grep -r "TODO\|FIXME" --include="*.py" app/; then echo "❌ Found TODO/FIXME in code. Please resolve before commit."; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      # Check for print statements in production code
+      - id: check-print-statements
+        name: Check for print statements
+        entry: bash -c 'if grep -r "print(" --include="*.py" app/ --exclude-dir=tests; then echo "❌ Found print() statements in production code. Use logging instead."; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      # Validate .env files don't contain real secrets
+      - id: check-env-files
+        name: Check .env files
+        entry: bash -c 'for file in $(find . -name "*.env*" -not -path "./venv/*"); do if [[ -f "$file" && $(wc -l < "$file") -gt 0 ]]; then if grep -E "(password|secret|key|token).*=.+" "$file"; then echo "❌ Found potential secrets in $file"; exit 1; fi; fi; done'
+        language: system
+        pass_filenames: false
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.3
+    hooks:
+      - id: prettier
+        types_or: [yaml, json, markdown]
+        exclude: ^(.*\.md|.*\.json)$
