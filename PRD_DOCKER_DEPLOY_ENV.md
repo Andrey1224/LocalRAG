@@ -157,5 +157,3 @@ chunking:
 4. **Week 4** — Поддержка prod-режима + хостинг (Render, HuggingFace)
 
 ---
-
-

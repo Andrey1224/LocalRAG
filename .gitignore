@@ -75,7 +75,7 @@ data/raw/*
 data/normalized/*
 data/chunks/*
 !data/raw/.gitkeep
-!data/normalized/.gitkeep  
+!data/normalized/.gitkeep
 !data/chunks/.gitkeep
 
 logs/*.log
@@ -115,3 +115,31 @@ tmp/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Pre-commit
+.pre-commit-config.yaml.bak
+
+# Testing and analysis files (temporary)
+*_REPORT.md
+*test_results*.md
+*test_analysis*.md
+*pattern_analysis*.md
+bandit-report.json
+run_test_batch.sh
+
+# Temporary test files
+test_*.html
+test_api.py
+test_api_server.py
+test_document.md
+!tests/
+!test_ui.py
+!test_eval_cases.jsonl
+
+# Support and documentation (temporary)
+support_agent_knowledge_base*.md
+*knowledge_base*.md
+
+# Requirements backup files
+requirements-dev.txt
+!requirements.txt

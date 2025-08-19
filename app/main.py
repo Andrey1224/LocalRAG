@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, ingest, ask, feedback, evaluation
+from app.api import ask, evaluation, feedback, health, ingest
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.middleware import (
@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     logger.info("Starting LocalRAG application", version="0.1.0", env=settings.env)
-    
+
     # Startup logic
     try:
         # Initialize services here if needed
@@ -58,10 +58,7 @@ app.add_middleware(TracingMiddleware)
 
 # Add rate limiting in production
 if settings.env == "prod":
-    app.add_middleware(
-        RateLimitMiddleware,
-        requests_per_minute=settings.rate_limit_requests
-    )
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=settings.rate_limit_requests)
 
 # Include routers
 app.include_router(health.router, tags=["Health"])
@@ -69,6 +66,7 @@ app.include_router(ingest.router, prefix="/api", tags=["Ingest"])
 app.include_router(ask.router, prefix="/api", tags=["Ask"])
 app.include_router(feedback.router, prefix="/api", tags=["Feedback"])
 app.include_router(evaluation.router, prefix="/api", tags=["Evaluation"])
+
 
 # Root endpoint
 @app.get("/")
@@ -99,7 +97,7 @@ async def not_found_handler(request, exc):
 async def internal_error_handler(request, exc):
     """Handle 500 errors."""
     logger.error("Internal server error", error=str(exc), path=str(request.url))
-    
+
     if settings.debug:
         return {
             "error": "Internal Server Error",
@@ -116,7 +114,7 @@ async def internal_error_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app.main:app",
         host=settings.api_host,

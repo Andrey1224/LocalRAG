@@ -87,3 +87,18 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "--cov=app --cov-report=term-missing"
+
+[tool.deptry]
+exclude = [
+    "\\.venv",
+    "\\.git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".*\\.egg-info"
+]
+
+[tool.deptry.package_module_name_map]
+"psycopg2-binary" = "psycopg2"
+"pytest-asyncio" = "pytest_asyncio"
+"pytest-cov" = "pytest_cov"
