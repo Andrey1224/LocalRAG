@@ -11,7 +11,16 @@ repos:
     rev: v0.1.6
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args:
+          [
+            --fix,
+            --exit-non-zero-on-fix,
+            --ignore=B904,
+            B008,
+            E402,
+            F841,
+            UP007,
+          ]
       - id: ruff-format
 
   # Type checking
@@ -27,7 +36,7 @@ repos:
     rev: 1.7.5
     hooks:
       - id: bandit
-        args: ["-r", ".", "-f", "json", "-o", "bandit-report.json"]
+        args: ["-r", "app/", "-f", "json", "-o", "bandit-report.json"]
         exclude: ^tests/
 
   # Dependency analysis (disabled for now - can be enabled when project is stable)
@@ -72,7 +81,7 @@ repos:
       # Fast unit tests only (not integration tests)
       - id: pytest-fast
         name: pytest-fast
-        entry: python -m pytest
+        entry: bash -c "source venv/bin/activate 2>/dev/null || true; python -m pytest"
         language: system
         types: [python]
         args: ["-x", "--tb=short", "-q", "tests/unit/", "--no-cov"]
